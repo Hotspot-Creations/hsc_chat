@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>HSC Chat</title>
+
+  <!-- Local dependencies -->
+  <link rel="stylesheet" href="vendor/latofonts.css">
+  <link rel="stylesheet" href="vendor/flexboxgrid.6.3.1.min.css">
+  <link rel="stylesheet" href="vendor/animate.3.5.2.min.css">
+
+  <!-- HSC styling must load last -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <!-- HSC Chat application -->
+  <script type="text/x-template" id="app_template">
+    <div id="app">
+      <div
+        class="chat-window"
+        :style="style"
+        :class="{
+          'fadeOutUp animated': !showWindow,
+          'hidden': shouldHide
+        }"
+      >
+        <div class="chat-messages" ref="messages">
+          <message
+            v-for="(msg, index) in messages"
+            :key="'message-' + index"
+            :templates="templates"
+            :multiline="msg.multiline"
+            :args="msg.args"
+            :color="msg.color"
+            :template="msg.template"
+            :template-id="msg.templateId"
+          ></message>
+        </div>
+      </div>
+
+      <div class="chat-input" v-show="showInput">
+        <div>
+          <textarea
+            v-model="message"
+            ref="input"
+            :class="{ 'empty-suggestions': emptySuggestions }"
+            placeholder="Enter a message or command..."
+            aria-label="HSC chat message"
+            spellcheck="false"
+            @keyup.esc="hideInput(true)"
+            @keyup="keyUp"
+            @keydown="keyDown"
+            @keydown.tab.prevent="completeSuggestion"
+            @keydown.ctrl.down.prevent="switchSuggestionDown"
+            @keydown.ctrl.up.prevent="switchSuggestionUp"
+            @keypress.enter.prevent="send"
+          ></textarea>
+
+          <div class="suggestion-slash" aria-hidden="true">/</div>
+        </div>
+
+        <suggestions
+          :message="message"
+          :suggestions="suggestions"
+          :selected-suggestion-idx="selectedSuggestionIdx"
+        ></suggestions>
+      </div>
+    </div>
+  </script>
+
+  <!-- Message component -->
+  <script type="text/x-template" id="message_template">
+    <div class="msg" :class="{ multiline: multiline }">
+      <span v-html="textEscaped"></span>
+    </div>
+  </script>
+
+  <!-- Suggestions component -->
+  <script type="text/x-template" id="suggestions_template">
+    <div
+      class="suggestions-wrap"
+      v-show="currentSuggestions.length > 0"
+    >
+      <ul class="suggestions">
+        <li
+          v-for="(suggestion, suggestionIndex) in currentSuggestions"
+          :key="suggestion.name + '-' + suggestionIndex"
+          class="suggestion"
+          :class="{
+            selected: selectedSuggestionIdx === suggestionIndex
+          }"
+        >
+          <p>
+            <span :class="{ disabled: suggestion.disabled }">
+              {{ suggestion.name }}
+            </span>
+
+            <span
+              v-for="(parameter, parameterIndex) in suggestion.params"
+              :key="suggestion.name + '-parameter-' + parameterIndex"
+              class="param"
+              :class="{ disabled: parameter.disabled }"
+            >
+              [{{ parameter.name }}]
+            </span>
+          </p>
+
+          <small class="help">
+            <span v-if="suggestion.help && !suggestion.disabled">
+              {{ suggestion.help }}
+            </span>
+
+            <span
+              v-for="(parameter, parameterIndex) in suggestion.params"
+              v-if="parameter.help && !parameter.disabled"
+              :key="suggestion.name + '-help-' + parameterIndex"
+            >
+              {{ parameter.help }}
+            </span>
+          </small>
+        </li>
+      </ul>
+    </div>
+  </script>
+
+  <!-- Framework and configuration -->
+  <script src="vendor/vue.2.3.3.min.js"></script>
+  <script src="js/config.default.js"></script>
+  <script src="js/config.js"></script>
+
+  <!-- HSC components -->
+  <script src="js/Suggestions.js"></script>
+  <script src="js/Message.js"></script>
+  <script src="js/App.js"></script>
+
+  <!-- Application entry point -->
+  <script>
+    window.hscChat = new Vue({
+      el: "#app",
+
+      render: function (createElement) {
+        return createElement(window.APP);
+      }
+    });
+
+    /*
+     * Browser testing helper:
+     *
+     * emulate("ON_OPEN");
+     * emulate("ON_MESSAGE", {
+     *   message: {
+     *     templateId: "system",
+     *     args: ["HSC Chat test message"]
+     *   }
+     * });
+     */
+    window.emulate = function (type, detail) {
+      var payload = Object.assign({}, detail || {}, {
+        type: type
+      });
+
+      window.dispatchEvent(
+        new CustomEvent("message", {
+          detail: payload
+        })
+      );
+    };
+  </script>
+</body>
+</html>
